@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="description" content="ImageUp AI - upscale images 2x, 4x or 8x without losing quality. Upload an image, compare before and after, then download the higher-resolution result.">
+<title>ImageUp AI — Upscale Images Without Losing Quality</title>
+
+<link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body id="top">
+
+<!-- Keyboard users can jump straight to the tool -->
+<a class="skip-link" href="#upscaler">Skip to the upscaler</a>
+
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="site-header" id="siteHeader">
+  <div class="container header__inner">
+
+    <a class="brand" href="#top" aria-label="ImageUp AI, home">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M12 2.5l1.7 4.6a4 4 0 0 0 2.4 2.4l4.6 1.7-4.6 1.7a4 4 0 0 0-2.4 2.4L12 20l-1.7-4.7a4 4 0 0 0-2.4-2.4L3.3 11.2l4.6-1.7a4 4 0 0 0 2.4-2.4L12 2.5z"/>
+          <path d="M19 2.5l.6 1.6a2 2 0 0 0 1.2 1.2l1.6.6-1.6.6a2 2 0 0 0-1.2 1.2L19 9.3l-.6-1.6a2 2 0 0 0-1.2-1.2l-1.6-.6 1.6-.6a2 2 0 0 0 1.2-1.2L19 2.5z" opacity=".75"/>
+        </svg>
+      </span>
+      <span class="brand__name">ImageUp<span class="brand__ai"> AI</span></span>
+    </a>
+
+  </div>
+</header>
+
+
+<main>
+
+<!-- ============================================================
+     HERO + UPSCALER TOOL
+     ============================================================ -->
+<section class="hero" id="upscaler">
+  <div class="hero__glow" aria-hidden="true"></div>
+
+  <!-- Floating clay shapes, purely decorative -->
+  <div class="hero__shapes" aria-hidden="true">
+    <span class="shape shape--sphere"></span>
+    <span class="shape shape--pill"></span>
+    <span class="shape shape--cube"></span>
+    <span class="shape shape--dot"></span>
+    <span class="shape shape--bead"></span>
+    <span class="shape shape--ring"></span>
+    <span class="shape shape--capsule"></span>
+    <span class="shape shape--chip"></span>
+    <span class="shape shape--seed"></span>
+
+    <span class="sparkle sparkle--1"></span>
+    <span class="sparkle sparkle--2"></span>
+    <span class="sparkle sparkle--3"></span>
+    <span class="sparkle sparkle--4"></span>
+    <span class="sparkle sparkle--5"></span>
+    <span class="sparkle sparkle--6"></span>
+  </div>
+
+  <div class="container hero__inner">
+
+    <h1 class="hero__title">
+      <span class="gradient-text hero__word">Upscale</span>
+      <span class="gradient-text hero__word">Images</span>
+      <span class="gradient-text hero__word">Without</span>
+      <span class="gradient-text hero__word">Losing</span>
+      <span class="gradient-text hero__word">Quality</span>
+    </h1>
+
+    <!-- ------------------------------------------------------
+         THE TOOL - four panels, one visible at a time
+         ------------------------------------------------------ -->
+    <div class="tool" id="tool">
+
+      <!-- Hidden native input. The styled drop zone below drives it. -->
+      <input class="sr-only" type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png,image/webp">
+
+
+      <!-- PANEL 1 — UPLOAD -->
+      <section class="panel" id="panelUpload" aria-label="Upload an image">
+        <div class="dropzone" id="dropzone" role="button" tabindex="0"
+             aria-label="Upload an image. Press Enter to browse files, drop a file here, or paste an image from your clipboard.">
+          <span class="dropzone__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 16V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/>
+              <path d="M4 16v2.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V16"/>
+            </svg>
+          </span>
+          <p class="dropzone__title">Drop your image here</p>
+          <p class="dropzone__sub">or <span class="dropzone__link">click to browse</span></p>
+          <p class="dropzone__meta">JPG • JPEG • PNG • WEBP</p>
+          <p class="dropzone__meta dropzone__meta--dim">Maximum 30MB &nbsp;·&nbsp; you can also paste with Ctrl&nbsp;+&nbsp;V</p>
+        </div>
+      </section>
+
+
+      <!-- PANEL 2 — PREVIEW + OPTIONS -->
+      <section class="panel" id="panelEditor" aria-label="Image preview and upscale options" hidden>
+
+        <!-- Preview -->
+        <div class="preview">
+          <div class="preview__thumb">
+            <img id="previewImg" alt="Preview of the image you selected">
+          </div>
+          <div class="preview__meta">
+            <p class="preview__name" id="fileName">image.jpg</p>
+            <ul class="preview__facts">
+              <li id="fileDims">0 × 0</li>
+              <li id="fileSize">0 KB</li>
+              <li id="fileFormat">JPEG</li>
+            </ul>
+            <div class="preview__actions">
+              <button class="btn btn--ghost btn--sm" type="button" id="changeBtn">Change Image</button>
+              <button class="btn btn--ghost btn--sm btn--danger" type="button" id="removeBtn">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scale picker -->
+        <h2 class="tool__heading" id="scaleHeading">Choose Upscale Level</h2>
+
+        <div class="scale-grid" id="scaleGroup" role="radiogroup" aria-labelledby="scaleHeading">
+          <button class="scale" type="button" role="radio" aria-checked="true" data-scale="2" tabindex="0">
+            <span class="scale__x">2×</span>
+            <span class="scale__hint">Fast · everyday photos</span>
+          </button>
+          <button class="scale" type="button" role="radio" aria-checked="false" data-scale="4" tabindex="-1">
+            <span class="scale__x">4×</span>
+            <span class="scale__hint">Balanced · print &amp; web</span>
+          </button>
+          <button class="scale" type="button" role="radio" aria-checked="false" data-scale="8" tabindex="-1">
+            <span class="scale__x">8×</span>
+            <span class="scale__hint">Maximum · small images</span>
+          </button>
+        </div>
+
+        <div class="output-res">
+          <span class="output-res__label">Output Resolution</span>
+          <span class="output-res__right">
+            <strong class="output-res__value" id="outputRes" aria-live="polite">0 × 0</strong>
+            <span class="output-res__estimate" id="outputEstimate"></span>
+          </span>
+        </div>
+
+        <button class="btn btn--primary btn--lg btn--block" type="button" id="upscaleBtn" disabled>
+          <span class="btn__icon" aria-hidden="true">✨</span> Upscale Image
+        </button>
+      </section>
+
+
+      <!-- PANEL 3 — PROCESSING -->
+      <section class="panel panel--processing" id="panelProcessing" aria-label="Processing" hidden>
+        <div class="loader" aria-hidden="true">
+          <span class="loader__ring"></span>
+          <span class="loader__spark">✨</span>
+        </div>
+        <h2 class="processing__title">Upscaling your image…</h2>
+        <p class="processing__sub">The AI model is running on your device.</p>
+
+        <div class="progress is-indeterminate" id="progress"
+             role="progressbar" aria-labelledby="procMessage" aria-valuemin="0" aria-valuemax="100">
+          <span class="progress__bar" id="progressBar"></span>
+        </div>
+
+        <p class="processing__msg" id="procMessage" role="status">Preparing image…</p>
+        <p class="processing__detail" id="procDetail"></p>
+
+        <button class="btn btn--ghost btn--sm processing__cancel" type="button" id="cancelBtn">Cancel</button>
+      </section>
+
+
+      <!-- PANEL 4 — RESULT -->
+      <section class="panel" id="panelResult" aria-label="Upscaled result" hidden>
+
+        <h2 class="tool__heading tool__heading--center">Compare Result</h2>
+        <p class="tool__subheading">Drag the handle to compare the original with the upscaled image.</p>
+
+        <!-- Before / after slider -->
+        <div class="compare">
+          <div class="ba" id="baFrame" style="--pos:50%; --zoom:1; --ar:16/9;">
+            <div class="ba__stage" id="baStage">
+              <img class="ba__layer" id="baBefore" alt="Original image before upscaling">
+              <div class="ba__layer ba__after" id="baAfter"><!-- result canvas is inserted here --></div>
+              <div class="ba__handle" id="baHandle" role="slider" tabindex="0"
+                   aria-label="Comparison slider position"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50%"
+                   aria-orientation="horizontal">
+                <span class="ba__grip" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9.5 7.5 5.5 12l4 4.5M14.5 7.5l4 4.5-4 4.5"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+            <span class="ba__tag ba__tag--before">BEFORE</span>
+            <span class="ba__tag ba__tag--after" id="baTagAfter">AFTER</span>
+          </div>
+        </div>
+
+        <!-- Zoom -->
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button class="zoom__btn" type="button" id="zoomOut" aria-label="Zoom out">−</button>
+          <button class="zoom__value" type="button" id="zoomReset" aria-label="Reset zoom to 100%" aria-live="polite">100%</button>
+          <button class="zoom__btn" type="button" id="zoomIn" aria-label="Zoom in">+</button>
+        </div>
+
+        <!-- Result information -->
+        <dl class="info">
+          <div class="info__cell">
+            <dt>Original</dt>
+            <dd class="info__value" id="infoOrigDims">0 × 0</dd>
+            <dd class="info__sub" id="infoOrigSize">—</dd>
+          </div>
+          <div class="info__cell">
+            <dt>Upscaled</dt>
+            <dd class="info__value" id="infoOutDims">0 × 0</dd>
+            <dd class="info__sub" id="infoOutSize">—</dd>
+          </div>
+          <div class="info__cell">
+            <dt>Scale</dt>
+            <dd class="info__value" id="infoScale">2×</dd>
+            <dd class="info__sub" id="infoEngine">Demo mode</dd>
+          </div>
+          <div class="info__cell">
+            <dt>Format</dt>
+            <dd class="info__value" id="infoFormat">PNG</dd>
+            <dd class="info__sub" id="infoQuality">Lossless</dd>
+          </div>
+        </dl>
+
+        <!-- Download -->
+        <div class="download">
+          <!-- The real, measured size of the settings above, before downloading -->
+          <div class="filesize">
+            <p class="filesize__row">
+              <span class="filesize__label">File size</span>
+              <strong class="filesize__value" id="downloadSizeValue" role="status">—</strong>
+            </p>
+            <p class="filesize__hint" id="filesizeHint">PNG, stored without compression — every pixel exactly as the AI produced it. A bigger file, not a better image.</p>
+          </div>
+
+          <button class="btn btn--primary btn--lg btn--block" type="button" id="downloadBtn">
+            <span class="btn__icon btn__icon--down" aria-hidden="true">↓</span> Download Upscaled Image
+          </button>
+
+          <button class="btn btn--ghost btn--block" type="button" id="resetBtn">Upscale Another Image</button>
+        </div>
+      </section>
+
+    </div><!-- /.tool -->
+
+  </div>
+</section>
+
+</main>
+
+<!-- Toast / error messages are injected here -->
+<div class="toasts" id="toasts" role="region" aria-label="Notifications"></div>
+
+<!-- The AI engine first (it defines window.ImageUpAI), then the interface -->
+<script src="js/ai-upscaler.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

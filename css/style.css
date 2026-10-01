@@ -1,0 +1,1651 @@
+/* ==========================================================================
+   ImageUp AI — style.css
+   Plain CSS3. No frameworks, no preprocessors.
+
+   Table of contents
+   01. Design tokens & themes
+   02. Reset & base
+   03. Layout helpers
+   04. Buttons & form controls
+   05. Header & navigation
+   06. Hero
+   07. Tool shell & panels
+   08. Drop zone
+   09. Image preview
+   10. Upscale level picker
+   11. Processing state
+   12. Before / after comparison
+   13. Zoom controls
+   14. Result information
+   15. Download options
+   16. Toasts
+   17. Animations
+   18. Responsive (media queries)
+   ========================================================================== */
+
+
+/* ==========================================================================
+   01. DESIGN TOKENS & THEMES
+   ========================================================================== */
+
+:root {
+  /* Dark is the default. The light block below takes over when the
+     operating system asks for light; there is no manual switch. */
+  --bg:            #1a1c2c;
+  --bg-elev:       #22253a;
+  --surface:       #272b44;
+  --surface-solid: #2b2f4a;
+  --surface-hover: #313654;
+  --border:        rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text:          #eef0f6;
+  --text-soft:     #c3c9d8;
+  --muted:         #949cb1;
+
+  --brand-1:       #7c8cff;
+  --brand-2:       #b06cff;
+  --brand-3:       #46d6ff;
+  --brand-ink:     #151729;   /* on the rainbow: dark, since yellow and green are light */
+  --brand-soft:    rgba(124, 140, 255, 0.14);
+
+  --danger:        #ff6b6b;
+  --danger-soft:   rgba(255, 107, 107, 0.12);
+  --success:       #34d399;
+  --success-soft:  rgba(52, 211, 153, 0.12);
+  --warning:       #f0b429;
+
+  /* A rainbow. --gradient fills surfaces (buttons, the logo, the selected
+     ring, the progress bar) and carries --brand-ink on top. --gradient-text
+     is the same rainbow used as lettering; the light theme deepens it,
+     because yellow type on a pale page cannot be read.
+     The stops are lists so any gradient can reuse them; each list's first
+     colour is kept apart so a ring (conic gradient) can close on it. */
+  --rainbow-start:      #ff6b8b;
+  --rainbow:            var(--rainbow-start), #ffa24d, #ffd84d, #5ee38f, #45c4ff, #8b93ff, #c68bff;
+  --rainbow-text-start: var(--rainbow-start);
+  --rainbow-text:       var(--rainbow);
+  --gradient:      linear-gradient(120deg, var(--rainbow));
+  --gradient-text: linear-gradient(120deg, var(--rainbow-text));
+
+  --shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-md:     0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-lg:     0 30px 70px rgba(0, 0, 0, 0.45);
+  --shadow-brand:  0 12px 34px rgba(124, 140, 255, 0.30);
+
+  /* Clay: every raised surface is an outer drop shadow plus a light inner
+     edge top-left and a dark inner edge bottom-right, which is what makes a
+     flat fill read as a soft, rounded lump. Wells are the same edges flipped. */
+  --clay-hi:       rgba(255, 255, 255, 0.10);
+  --clay-lo:       rgba(0, 0, 0, 0.38);
+  --clay-drop:     rgba(0, 0, 0, 0.45);
+  --clay-brand-drop: rgba(124, 140, 255, 0.38);
+
+  --clay-sm:       6px 8px 16px var(--clay-drop),
+                   inset -3px -4px 8px var(--clay-lo),
+                   inset 3px 3px 8px var(--clay-hi);
+  --clay:          12px 16px 32px var(--clay-drop),
+                   inset -6px -7px 14px var(--clay-lo),
+                   inset 6px 6px 14px var(--clay-hi);
+  --clay-lg:       22px 28px 60px var(--clay-drop),
+                   inset -10px -12px 24px var(--clay-lo),
+                   inset 10px 10px 24px var(--clay-hi);
+  --clay-well:     inset 5px 6px 12px var(--clay-lo),
+                   inset -4px -4px 10px var(--clay-hi);
+  --clay-brand:    8px 12px 26px var(--clay-brand-drop),
+                   inset -5px -6px 12px rgba(0, 0, 0, 0.22),
+                   inset 5px 5px 12px rgba(255, 255, 255, 0.40);
+  /* Coloured light spilling out from under the tool card: rose on the left,
+     green beneath, sky on the right. Added after its clay shadow. */
+  --clay-aura:     -36px 24px 90px -34px rgba(255, 107, 139, 0.45),
+                   0 56px 90px -44px rgba(94, 227, 143, 0.20),
+                   36px 18px 90px -34px rgba(69, 196, 255, 0.45);
+
+  --radius-sm:     14px;
+  --radius:        22px;
+  --radius-lg:     30px;
+  --radius-xl:     40px;
+  --radius-pill:   999px;
+
+  --header-h:      68px;
+  --ease:          cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout:    cubic-bezier(0.65, 0, 0.35, 1);
+  --speed:         0.28s;
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto,
+          "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:            #e9ebfa;
+    --bg-elev:       #f1f2fd;
+    --surface:       #f5f6ff;
+    --surface-solid: #fafaff;
+    --surface-hover: #ffffff;
+    --border:        rgba(14, 18, 32, 0.10);
+    --border-strong: rgba(14, 18, 32, 0.20);
+
+    --text:          #0e1220;
+    --text-soft:     #2d3550;
+    --muted:         #5c6478;
+
+    --brand-1:       #5b63f5;
+    --brand-2:       #9333ea;
+    --brand-3:       #0ea5e9;
+    --brand-soft:    rgba(91, 99, 245, 0.10);
+    --warning:       #a86a00;
+
+    --rainbow-start:      #fb5a7c;
+    --rainbow:            var(--rainbow-start), #fb8c3c, #f5c518, #34d17a, #29b0f0, #7479f5, #b46af5;
+    --rainbow-text-start: #e11d48;
+    --rainbow-text:       var(--rainbow-text-start), #ea580c, #b45309, #15803d, #0369a1, #4338ca, #7e22ce;
+
+    --shadow-sm:     0 1px 2px rgba(14, 18, 32, 0.06);
+    --shadow-md:     0 10px 30px rgba(14, 18, 32, 0.08);
+    --shadow-lg:     0 30px 70px rgba(14, 18, 32, 0.12);
+    --shadow-brand:  0 12px 34px rgba(91, 99, 245, 0.22);
+
+    --clay-hi:       rgba(255, 255, 255, 0.95);
+    --clay-lo:       rgba(91, 99, 190, 0.16);
+    --clay-drop:     rgba(76, 84, 170, 0.20);
+    --clay-brand-drop: rgba(91, 99, 245, 0.34);
+    --clay-aura:     -36px 24px 90px -34px rgba(251, 90, 124, 0.30),
+                     0 56px 90px -44px rgba(52, 209, 122, 0.18),
+                     36px 18px 90px -34px rgba(41, 176, 240, 0.30);
+  }
+}
+
+
+/* ==========================================================================
+   02. RESET & BASE
+   ========================================================================== */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+* { margin: 0; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+img, svg, canvas, video { display: block; max-width: 100%; }
+img, canvas { height: auto; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; }
+
+a { color: var(--brand-1); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; font-weight: 700; }
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 0.12em 0.4em;
+  border-radius: 6px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+}
+
+/* Selected text takes the rainbow's first colour. The colour is set too, so
+   rainbow lettering (transparent underneath) stays readable while selected. */
+::selection {
+  background: color-mix(in srgb, var(--rainbow-start) 38%, transparent);
+  color: var(--text);
+}
+
+/* A clay scrollbar with a rainbow thumb (Chromium and Safari; other browsers
+   keep their own). Left without `scrollbar-color` on purpose: setting it
+   makes Chromium ignore these rules. */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb {
+  border: 3px solid var(--bg);
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--rainbow));
+}
+
+/* Visible focus for every interactive element */
+:focus-visible {
+  outline: 2px solid var(--brand-1);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Screen-reader only (the real <input type="file"> lives here) */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 50%;
+  top: -60px;
+  transform: translateX(-50%);
+  z-index: 200;
+  padding: 10px 18px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: var(--brand-1);
+  color: #fff;
+  font-weight: 600;
+  transition: top var(--speed) var(--ease);
+}
+.skip-link:focus { top: 0; text-decoration: none; }
+
+[hidden] { display: none !important; }
+
+
+/* ==========================================================================
+   03. LAYOUT HELPERS
+   ========================================================================== */
+
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+
+.gradient-text {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+
+/* ==========================================================================
+   04. BUTTONS & FORM CONTROLS
+   ========================================================================== */
+
+.btn {
+  --btn-bg: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--btn-bg);
+  color: var(--text);
+  box-shadow: var(--clay-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--speed) var(--ease),
+              box-shadow var(--speed) var(--ease),
+              background-color var(--speed) var(--ease),
+              border-color var(--speed) var(--ease),
+              color var(--speed) var(--ease),
+              filter var(--speed) var(--ease),
+              opacity var(--speed) var(--ease);
+}
+.btn:hover { text-decoration: none; transform: translateY(-2px); }
+/* Pressed clay squashes into the page: the lump becomes a well. */
+.btn:active { transform: translateY(0) scale(0.99); box-shadow: var(--clay-well); }
+
+.btn--primary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;          /* clips the shine below; the clay shadow is the
+                                button's own, so it is not clipped */
+  background: var(--gradient);
+  color: var(--brand-ink);
+  box-shadow: var(--clay-brand);
+}
+/* Every few seconds a band of light sweeps across. It sits above the rainbow
+   but under the label (isolation + z-index -1), and waits off the button at
+   both ends of its run, so the loop restarting is never seen. */
+.btn--primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  translate: -100% 0;
+  animation: shine 4.2s 1.4s var(--ease-inout) infinite;
+  pointer-events: none;
+}
+.btn--primary:disabled::after { animation: none; }
+
+/* The sparkle and arrow on the main buttons: the sparkle pops and turns on
+   hover, the arrow nods downward, as if already dropping the file. */
+.btn__icon { display: inline-block; }
+.btn--primary:hover:not(:disabled) .btn__icon { animation: icon-pop 0.6s var(--ease); }
+.btn--primary:hover:not(:disabled) .btn__icon--down { animation: icon-drop 0.9s var(--ease-inout) infinite; }
+/* The whole rainbow is always on show, so hover brightens it rather than
+   sliding part of it out of view. */
+.btn--primary:hover { filter: brightness(1.06) saturate(1.12); box-shadow: var(--clay-brand), 0 18px 40px var(--clay-brand-drop); }
+.btn--primary:active:not(:disabled) {
+  box-shadow: inset 5px 6px 12px rgba(0, 0, 0, 0.25), inset -4px -4px 10px rgba(255, 255, 255, 0.25);
+}
+
+.btn--ghost { background: var(--surface); color: var(--text-soft); }
+.btn--ghost:hover { background: var(--surface-hover); color: var(--text); }
+
+.btn--danger { color: var(--danger); }
+.btn--danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+.btn--sm  { padding: 9px 16px; font-size: 0.875rem; }
+.btn--lg  { padding: 17px 30px; font-size: 1.05rem; }
+.btn--block { display: flex; width: 100%; }
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: var(--clay-well);
+  filter: saturate(0.4);
+}
+
+/* ==========================================================================
+   05. HEADER & NAVIGATION
+   ========================================================================== */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* Nearly solid rather than a frosted blur: a backdrop blur is recomputed
+     every frame anything moves beneath it, and the hero never stops moving. */
+  background: var(--bg);                                    /* fallback */
+  background: color-mix(in srgb, var(--bg) 95%, transparent);
+  box-shadow: 0 8px 24px -12px var(--clay-drop);
+}
+/* A thin rainbow along the header's bottom edge, its colours cycling with the
+   headline's. Like every loop on this page it only animates a GPU-composited
+   property (here a hue filter), so it never has to be repainted. */
+.site-header::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--rainbow));
+  opacity: 0.85;
+  animation: hue-cycle 7s linear infinite;
+  pointer-events: none;
+}
+
+.header__inner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: var(--header-h);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  flex: 0 0 auto;
+}
+.brand:hover { text-decoration: none; }
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 38px; height: 38px;
+  border-radius: 14px;
+  background: var(--gradient);
+  color: var(--brand-ink);
+  box-shadow: var(--clay-brand);
+  /* Every few seconds the mark gives a little wiggle. On `rotate`, so the
+     hover turn (on `transform`) still works. */
+  animation: mark-wiggle 6s var(--ease-inout) 2s infinite;
+  transition: transform 0.5s var(--ease), box-shadow var(--speed) var(--ease);
+}
+.brand:hover .brand__mark {
+  transform: rotate(-8deg) scale(1.06);
+  box-shadow: var(--clay-brand), 0 14px 34px var(--clay-brand-drop);
+}
+.brand__name { font-size: 1.06rem; }
+.brand__ai {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+
+/* ==========================================================================
+   06. HERO
+   ========================================================================== */
+
+.hero {
+  position: relative;
+  padding-block: clamp(48px, 7vw, 88px) clamp(56px, 8vw, 96px);
+  scroll-margin-top: var(--header-h);
+  overflow: hidden;
+}
+.hero__glow {
+  position: absolute;
+  top: -260px; left: 50%;
+  width: min(1400px, 160vw);
+  height: 620px;
+  transform: translateX(-50%);
+  /* Each glow fades to nothing well inside the box (centre ± 70% of its
+     radius stays within 0–100%), so no edge of the box ever shows. */
+  background:
+    radial-gradient(26% 50% at 30% 50%, rgba(255, 107, 139, 0.22), transparent 70%),
+    radial-gradient(26% 50% at 50% 42%, rgba(94, 227, 143, 0.16), transparent 70%),
+    radial-gradient(26% 50% at 70% 50%, rgba(69, 196, 255, 0.22), transparent 70%);
+  /* No blur filter: the gradients already fade to nothing, and blurring a
+     layer this size on every frame of its breath was the costliest thing on
+     the page. */
+  pointer-events: none;
+  z-index: 0;
+  /* A slow breath behind the headline; symmetric easing for the same reason
+     as the headline's float below. */
+  animation: glow-breathe 12s var(--ease-inout) infinite alternate;
+}
+@media (prefers-color-scheme: light) {
+  .hero__glow { opacity: 0.55; }
+}
+
+/* Floating clay shapes around the tool. Each is a coloured lump: a white
+   highlight up top-left, darker clay bottom-right, and a drop shadow. They
+   drift and turn slowly on `alternate`, like everything else that loops.
+   Positions hang off the page centre, so they stay beside the card (or peek
+   from behind it) at any width.
+
+   Smoothness: each shape is painted once and then only moved by the GPU.
+   The resting tilt is a static `transform`; the drift animates `translate`
+   and `rotate` with fixed keyframes (float-a/b/c), because keyframes that
+   read custom properties can keep the browser from handing the animation to
+   the compositor. `contain` stops the shapes' layer invalidating the page. */
+.hero__shapes {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  contain: strict;
+}
+.shape {
+  position: absolute;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.7), transparent 32%),
+    linear-gradient(150deg, var(--c1), var(--c2));
+  box-shadow: 14px 22px 36px var(--clay-drop),
+              inset -8px -12px 20px rgba(0, 0, 0, 0.18),
+              inset 6px 8px 14px rgba(255, 255, 255, 0.35);
+  transform: rotate(var(--tilt, 0deg));
+  animation: float-a var(--float, 9s) var(--ease-inout) infinite alternate;
+  animation-delay: var(--float-delay, 0s);
+}
+.shape--sphere {
+  --c1: #ffa3b8; --c2: #f0457a;
+  width: 120px; height: 120px;
+  top: 330px; left: calc(50% - 560px);
+  --float: 10s;
+}
+.shape--pill {
+  --c1: #ffe27a; --c2: #ff9a3c;
+  width: 150px; height: 56px;
+  border-radius: 999px;
+  top: 250px; left: calc(50% + 400px);
+  --tilt: -28deg; --float: 8s; --float-delay: -3s;
+}
+.shape--cube {
+  --c1: #8adcff; --c2: #3b82f6;
+  width: 82px; height: 82px;
+  border-radius: 26px;
+  top: 480px; left: calc(50% + 450px);
+  --tilt: 16deg; --float: 11s; --float-delay: -6s;
+  animation-name: float-b;
+}
+.shape--dot {
+  --c1: #9af2bd; --c2: #22b866;
+  width: 44px; height: 44px;
+  top: 210px; left: calc(50% - 470px);
+  --float: 7s; --float-delay: -2s;
+  animation-name: float-b;
+}
+.shape--bead {
+  --c1: #dcbcff; --c2: #9b5cf6;
+  width: 30px; height: 30px;
+  top: 26px; left: calc(50% - 360px);
+  --float: 6s; --float-delay: -4s;
+  animation-name: float-c;
+}
+/* A clay ring. The body is an inset shadow as thick as the ring, so the hole
+   stays truly empty and the drop shadow only falls outside it. The lighter
+   and darker insets on top shade its outer rim like the other lumps. */
+.shape--ring {
+  width: 78px; height: 78px;
+  top: 610px; left: calc(50% + 400px);
+  background: none;
+  box-shadow: inset 5px 6px 8px -2px rgba(255, 255, 255, 0.55),
+              inset -5px -6px 10px -2px rgba(0, 0, 0, 0.25),
+              inset 0 0 0 20px #b98bff,
+              inset 0 0 0 21px rgba(80, 40, 160, 0.45),
+              12px 18px 28px var(--clay-drop);
+  --float: 12s; --float-delay: -5s;
+  animation-name: float-c;
+}
+.shape--capsule {
+  --c1: #8ff5e9; --c2: #14b8a6;
+  width: 40px; height: 96px;
+  border-radius: 999px;
+  top: 560px; left: calc(50% - 520px);
+  --tilt: 22deg; --float: 9s; --float-delay: -1s;
+  animation-name: float-b;
+}
+.shape--chip {
+  --c1: #ffb3c6; --c2: #ec4899;
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  top: 18px; left: calc(50% + 250px);
+  --tilt: -18deg; --float: 7s; --float-delay: -2.5s;
+  animation-name: float-c;
+}
+.shape--seed {
+  --c1: #fff0a8; --c2: #f5b301;
+  width: 26px; height: 26px;
+  top: 120px; left: calc(50% - 600px);
+  --float: 6.5s; --float-delay: -3.5s;
+}
+
+/* Four-point stars that twinkle around the headline: each grows, turns and
+   brightens, then fades back, on its own rhythm so they never pulse together.
+   The star is a text glyph, painted once; a clip-path cut-out would need its
+   own mask redrawn on every frame of the twinkle. */
+.sparkle {
+  position: absolute;
+  width: var(--size, 16px); height: var(--size, 16px);
+  color: var(--c, #fff);
+  font-size: var(--size, 16px);
+  line-height: 1;
+  text-align: center;
+  animation: twinkle var(--twinkle, 2.4s) var(--ease-inout) infinite alternate;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+.sparkle::before { content: "\2726"; }         /* ✦ */
+.sparkle--1 { --c: #ffd84d; --size: 28px; top: 110px; left: calc(50% - 470px); --twinkle: 2.2s; }
+.sparkle--2 { --c: #45c4ff; --size: 22px; top: 150px; left: calc(50% + 450px); --twinkle: 2.8s; --twinkle-delay: -1.1s; }
+.sparkle--3 { --c: #ff6b8b; --size: 18px; top: 252px; left: calc(50% - 160px); --twinkle: 1.9s; --twinkle-delay: -0.6s; }
+.sparkle--4 { --c: #c68bff; --size: 16px; top: 240px; left: calc(50% + 170px); --twinkle: 2.5s; --twinkle-delay: -1.7s; }
+.sparkle--5 { --c: #5ee38f; --size: 20px; top: 34px;  left: calc(50% + 310px); --twinkle: 2.1s; --twinkle-delay: -0.9s; }
+.sparkle--6 { --c: #ffa24d; --size: 16px; top: 46px;  left: calc(50% - 250px); --twinkle: 2.6s; --twinkle-delay: -2s; }
+
+.hero__inner { position: relative; z-index: 1; text-align: center; }
+
+.hero__title {
+  font-size: clamp(2.1rem, 5.6vw, 3.9rem);
+  letter-spacing: -0.03em;
+  /* No drop shadow here: with the words moving inside it, the GPU had to
+     re-blur the whole headline on every frame. */
+  animation: fade-up 0.6s var(--ease) both;
+}
+
+/* The headline moves on two loops with no seam: each word floats up and
+   settles back, one after another, so a slow wave runs across the line, and
+   its rainbow cycles through every colour.
+
+   Both loops animate only what the GPU can do on its own (`transform` and a
+   hue `filter`), so the words are painted once and never again; nothing
+   stutters even while the page is busy upscaling.
+
+   The float is seamless because of `alternate`: it runs forward, then plays
+   itself backwards, so the frame at the turn is the one already on screen.
+   Its easing has to be symmetric for the same reason, which is why it does
+   not use `--ease`. That curve is an ease-out: played backwards it would set
+   off fast from where the forward run had just come to rest, and the
+   mismatch shows as a tug at each turn.
+
+   The colour loop is seamless because a hue turned by 360° is the hue it
+   started as. Each word runs a little further along it than the word before
+   (the negative --hue-delay), so the colours travel across the line.
+
+   The gradient sits on each word, not on the headline, because text that a
+   transform moves is painted apart from its parent, and a parent's
+   `background-clip: text` would leave it invisible. */
+.hero__word {
+  display: inline-block;
+  /* An inline-block is only a line tall, and the gradient paints only inside
+     it, so descenders (p, g, y, Q) would come out blank. The padding makes
+     room for them; the matching negative margin keeps the layout unchanged. */
+  padding: 0.06em 0.04em 0.16em;
+  margin: -0.06em -0.04em -0.16em;
+  background-image: linear-gradient(90deg, var(--rainbow-text));
+  animation: word-float 2.8s var(--ease-inout) infinite alternate,
+             hue-cycle 7s linear infinite;
+  animation-delay: var(--word-delay, 0.6s), var(--hue-delay, 0s);
+}
+.hero__word:nth-child(2) { --word-delay: 0.78s; --hue-delay: -0.8s; }
+.hero__word:nth-child(3) { --word-delay: 0.96s; --hue-delay: -1.6s; }
+.hero__word:nth-child(4) { --word-delay: 1.14s; --hue-delay: -2.4s; }
+.hero__word:nth-child(5) { --word-delay: 1.32s; --hue-delay: -3.2s; }
+
+
+/* ==========================================================================
+   07. TOOL SHELL & PANELS
+   ========================================================================== */
+
+.tool {
+  position: relative;
+  max-width: 820px;
+  margin: clamp(32px, 5vw, 48px) auto 0;
+  padding: clamp(20px, 3.4vw, 32px);
+  border-radius: var(--radius-xl);
+  background: var(--bg-elev);
+  box-shadow: var(--clay-lg), var(--clay-aura);
+  text-align: left;
+  animation: fade-up 0.7s 0.08s var(--ease) both;
+}
+.tool[data-busy="true"] { pointer-events: none; }
+/* While the card glides to a new panel's height, nothing spills past it. */
+.tool.is-morphing { overflow: hidden; }
+
+.panel { animation: panel-in 0.4s var(--ease) backwards; }
+.panel--processing { text-align: center; padding-block: clamp(30px, 6vw, 54px); }
+
+.tool__heading {
+  margin-top: 30px;
+  margin-bottom: 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.tool__heading--center { margin-top: 4px; text-align: center; font-size: clamp(1.3rem, 2.6vw, 1.7rem); }
+.tool__subheading {
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+
+/* ==========================================================================
+   08. DROP ZONE
+   ========================================================================== */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 300px;
+  padding: 40px 24px;
+  border: 2px dashed color-mix(in srgb, var(--brand-1) 35%, transparent);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 120% at 50% 0%, var(--brand-soft), transparent 60%),
+    var(--surface);
+  box-shadow: var(--clay-well);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--speed) var(--ease),
+              background-color var(--speed) var(--ease),
+              transform var(--speed) var(--ease);
+}
+.dropzone:hover { border-color: var(--brand-1); background-color: var(--surface-hover); }
+.dropzone:hover .dropzone__icon { transform: translateY(-3px); }
+
+/* On hover, focus or a drag, a rainbow ring lights up round the edge and its
+   colours run round it. The mask keeps only a 2px band of the conic fill;
+   the motion is a hue filter, which the GPU applies without repainting. */
+.dropzone { position: relative; }
+.dropzone::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(var(--rainbow), var(--rainbow-start));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--speed) var(--ease);
+  pointer-events: none;
+}
+.dropzone:hover::before,
+.dropzone:focus-visible::before,
+.dropzone.is-dragover::before {
+  opacity: 1;
+  animation: hue-cycle 3s linear infinite;
+}
+
+.dropzone.is-dragover {
+  border-color: var(--brand-1);
+  border-style: solid;
+  background-color: var(--brand-soft);
+  transform: scale(1.01);
+}
+.dropzone.is-dragover .dropzone__icon { transform: translateY(-6px) scale(1.06); }
+
+.dropzone__icon {
+  display: grid;
+  place-items: center;
+  width: 70px; height: 70px;
+  margin-bottom: 14px;
+  border-radius: 24px;
+  background: var(--surface-solid);
+  color: var(--brand-1);
+  box-shadow: var(--clay);
+  /* Bobs gently while waiting for a file. On `translate`, so the hover and
+     drag lifts, which use `transform`, still apply on top. */
+  animation: icon-bob 2.6s var(--ease-inout) infinite alternate;
+  transition: transform var(--speed) var(--ease),
+              background var(--speed) var(--ease),
+              color var(--speed) var(--ease),
+              box-shadow var(--speed) var(--ease);
+}
+.dropzone:hover .dropzone__icon,
+.dropzone.is-dragover .dropzone__icon { background: var(--gradient); color: var(--brand-ink); box-shadow: var(--clay-brand); }
+
+.dropzone__title { font-size: 1.22rem; font-weight: 700; }
+.dropzone__sub { color: var(--muted); font-size: 0.95rem; }
+.dropzone__link { color: var(--brand-1); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+.dropzone__meta {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+.dropzone__meta--dim { opacity: 0.85; margin-top: 10px; }
+
+
+/* ==========================================================================
+   09. IMAGE PREVIEW
+   ========================================================================== */
+
+.preview {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--clay);
+}
+
+.preview__thumb {
+  flex: 0 0 auto;
+  width: 108px; height: 108px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--clay-well);
+  background:
+    repeating-conic-gradient(var(--surface-hover) 0% 25%, transparent 0% 50%) 50% / 16px 16px;
+}
+.preview__thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.preview__meta { min-width: 0; flex: 1; }
+.preview__name {
+  font-weight: 700;
+  font-size: 1.02rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preview__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 6px 0 14px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+/* A small dot separates each fact, without adding markup */
+.preview__facts li { display: flex; align-items: center; gap: 10px; }
+.preview__facts li + li::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+.preview__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+
+/* ==========================================================================
+   10. UPSCALE LEVEL PICKER
+   ========================================================================== */
+
+.scale-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.scale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 18px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--clay-sm);
+  color: var(--text-soft);
+  text-align: center;
+  transition: transform var(--speed) var(--ease),
+              border-color var(--speed) var(--ease),
+              background-color var(--speed) var(--ease),
+              box-shadow var(--speed) var(--ease),
+              color var(--speed) var(--ease);
+}
+.scale:hover { transform: translateY(-3px); background: var(--surface-hover); }
+
+.scale__x { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+.scale__hint { font-size: 0.74rem; color: var(--muted); }
+
+/* The gradient edge of the selected card is an overlay that fades, because a
+   gradient background cannot transition: swapping it in directly snaps. */
+.scale { position: relative; }
+.scale::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--speed) var(--ease);
+  pointer-events: none;
+}
+.scale__x,
+.scale__hint { transition: color var(--speed) var(--ease); }
+
+.scale[aria-checked="true"] {
+  background-color: var(--surface-solid);
+  color: var(--text);
+  box-shadow: var(--clay), 0 10px 28px var(--clay-brand-drop);
+}
+.scale[aria-checked="true"]::before { opacity: 1; }
+.scale[aria-checked="true"] .scale__x {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.scale[aria-checked="true"] .scale__hint { color: var(--text-soft); }
+
+.output-res {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 20px 0 24px;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--clay-well);
+}
+.output-res__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.output-res__right { text-align: right; }
+.output-res__value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* How long the network will take — real work deserves a real warning */
+.output-res__estimate {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+.output-res__estimate.is-slow { color: var(--warning); }
+
+
+/* ==========================================================================
+   11. PROCESSING STATE
+   ========================================================================== */
+
+.loader {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 80px; height: 80px;
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  background: var(--surface-solid);
+  box-shadow: var(--clay);
+}
+/* A rainbow comet: the conic fill fades in from nothing to a bright head,
+   and the mask keeps only a 5px ring of it. */
+.loader__ring {
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: conic-gradient(transparent, var(--rainbow), var(--rainbow-start));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  animation: spin 0.9s linear infinite;
+}
+.loader__spark { font-size: 1.4rem; animation: pulse 1.6s var(--ease-inout) infinite; }
+
+.processing__title { font-size: clamp(1.25rem, 2.6vw, 1.6rem); }
+.processing__sub { margin-top: 8px; color: var(--muted); font-size: 0.93rem; }
+
+.progress {
+  position: relative;
+  width: min(420px, 100%);
+  height: 12px;
+  margin: 26px auto 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: inset 2px 3px 6px var(--clay-lo), inset -2px -2px 5px var(--clay-hi);
+  overflow: hidden;
+}
+/* Determinate: the width is real progress, set from JS */
+.progress__bar {
+  position: absolute;
+  top: 0; left: 0;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gradient);
+  box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.18), inset 2px 2px 4px rgba(255, 255, 255, 0.40);
+  overflow: hidden;          /* clips the stripes' spare tile, below */
+  transition: width 0.3s var(--ease);
+}
+/* Candy stripes marching along the bar. The stripe layer is one tile (16px)
+   longer than the bar and slides by exactly one tile, so the loop has no seam
+   — and it slides by `translate`, which the GPU does without repainting. */
+.progress__bar::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -16px; right: 0;
+  background: linear-gradient(-45deg,
+    rgba(255, 255, 255, 0.30) 25%, transparent 25% 50%,
+    rgba(255, 255, 255, 0.30) 50% 75%, transparent 75%);
+  background-size: 16px 16px;
+  animation: stripes 0.8s linear infinite;
+}
+/* Indeterminate: used only while we genuinely cannot measure progress. The
+   bar glides across by `translate` (a share of its own width), not by
+   changing `left` and `width`, which would re-lay out the page every frame
+   while the upscale is busy on the same thread. */
+.progress.is-indeterminate .progress__bar {
+  width: 40%;
+  transition: none;
+  animation: indeterminate 1.5s var(--ease-inout) infinite;
+}
+
+.processing__msg {
+  min-height: 1.5em;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  animation: fade-in 0.4s var(--ease);
+}
+.processing__detail {
+  min-height: 1.4em;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.processing__cancel { margin-top: 22px; }
+
+
+/* ==========================================================================
+   12. BEFORE / AFTER COMPARISON
+   ========================================================================== */
+
+.compare { display: flex; justify-content: center; }
+
+.ba {
+  position: relative;
+  width: min(100%, calc(62vh * var(--ar)));
+  aspect-ratio: var(--ar);
+  margin-inline: auto;
+  /* No border: the slider maps the pointer against this box's edges. */
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background:
+    repeating-conic-gradient(var(--surface-hover) 0% 25%, transparent 0% 50%) 50% / 20px 20px,
+    var(--surface-solid);
+  box-shadow: var(--clay);
+  cursor: ew-resize;
+  /* Lets the page still scroll vertically while horizontal drags move the slider */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: fade-in 0.45s var(--ease) both;
+}
+
+/* A rainbow rim drawn inside the frame. An overlay, never a border: the
+   slider maps the pointer against this box's edges, so its size must not
+   change. It sits above the image and tags but takes no clicks. */
+.ba::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  padding: 3px;
+  background: var(--gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  pointer-events: none;
+  will-change: transform;    /* its own layer: a slider drag never repaints it */
+}
+
+/* Everything that must stay pixel-aligned lives inside the zoom stage */
+.ba__stage {
+  position: absolute;
+  inset: 0;
+  transform: scale(var(--zoom, 1));
+  transform-origin: center center;
+  transition: transform 0.22s var(--ease);
+}
+
+.ba__layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;      /* both layers share the exact same aspect ratio */
+}
+.ba__layer canvas { width: 100%; height: 100%; display: block; }
+
+/* The upscaled layer is clipped from the left, revealing it on the right side */
+.ba__after { clip-path: inset(0 0 0 var(--pos, 50%)); }
+
+.ba__handle {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: var(--pos, 50%);
+  width: calc(44px / var(--zoom, 1));
+  margin-left: calc(-22px / var(--zoom, 1));
+  display: grid;
+  place-items: center;
+  cursor: ew-resize;
+  /* Its own layer, so a drag only moves it; the line and grip are never
+     repainted along the way. */
+  will-change: transform;
+}
+.ba__handle::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: calc(2px / var(--zoom, 1));
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.45);
+}
+.ba__grip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--gradient);
+  color: var(--brand-ink);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4),
+              inset -3px -4px 8px rgba(0, 0, 0, 0.22),
+              inset 3px 3px 8px rgba(255, 255, 255, 0.45);
+  transform: scale(calc(1 / var(--zoom, 1)));
+  transition: box-shadow var(--speed) var(--ease);
+}
+/* The grip itself carries the focus ring, so the tall hit area stays clean */
+.ba__handle:focus-visible { outline: none; }
+.ba:hover .ba__grip,
+.ba__handle:focus-visible .ba__grip {
+  box-shadow: 0 0 0 6px rgba(124, 140, 255, 0.30),
+              0 6px 18px rgba(0, 0, 0, 0.4),
+              inset -3px -4px 8px rgba(0, 0, 0, 0.22),
+              inset 3px 3px 8px rgba(255, 255, 255, 0.45);
+}
+.ba.is-dragging .ba__stage { transition: none; }
+
+.ba__tag {
+  position: absolute;
+  top: 12px;
+  z-index: 2;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(26, 28, 44, 0.80);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.30), inset 2px 2px 5px rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  /* No backdrop blur: it would be recomputed on every frame of a slider drag. */
+  pointer-events: none;
+}
+.ba__tag--before { left: 12px; }
+.ba__tag--after  { right: 12px; }
+
+
+/* ==========================================================================
+   13. ZOOM CONTROLS
+   ========================================================================== */
+
+.zoom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 22px auto 0;
+  padding: 6px;
+  width: fit-content;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: var(--clay-well);
+}
+.zoom__btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--surface-solid);
+  box-shadow: var(--clay-sm);
+  color: var(--text-soft);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color var(--speed) var(--ease),
+              color var(--speed) var(--ease),
+              box-shadow var(--speed) var(--ease);
+}
+.zoom__btn:hover:not(:disabled) { background: var(--surface-hover); color: var(--brand-1); }
+.zoom__btn:active:not(:disabled) { box-shadow: var(--clay-well); }
+.zoom__btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+.zoom__value {
+  min-width: 62px;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  border-radius: var(--radius-pill);
+  transition: background-color var(--speed) var(--ease);
+}
+.zoom__value:hover { background: var(--surface-hover); }
+
+
+/* ==========================================================================
+   14. RESULT INFORMATION
+   ========================================================================== */
+
+.info {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 28px 0 26px;
+}
+.info__cell {
+  padding: 16px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-solid);
+  box-shadow: var(--clay-sm);
+  text-align: center;
+}
+.info__cell dt {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* A little clay bead before each label, one rainbow colour per figure. */
+.info__cell dt::before {
+  content: "";
+  display: inline-block;
+  width: 9px; height: 9px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 0.05em;
+  background: var(--bead, var(--rainbow-start));
+  box-shadow: inset -1.5px -2px 3px rgba(0, 0, 0, 0.25), inset 1.5px 1.5px 2px rgba(255, 255, 255, 0.55);
+}
+.info__cell:nth-child(1) { --bead: #ff6b8b; }
+.info__cell:nth-child(2) { --bead: #ffc23d; }
+.info__cell:nth-child(3) { --bead: #3fd982; }
+.info__cell:nth-child(4) { --bead: #45a8ff; }
+.info__value {
+  margin: 7px 0 3px;
+  font-family: var(--font-mono);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+  word-break: break-word;
+}
+.info__sub { font-size: 0.76rem; color: var(--muted); }
+
+
+/* ==========================================================================
+   15. DOWNLOAD OPTIONS
+   ========================================================================== */
+
+.download { display: grid; gap: 16px; }
+
+/* The measured weight of the chosen settings, shown before downloading. */
+.filesize {
+  padding: 14px 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--clay-well);
+}
+
+.filesize__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filesize__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.filesize__value {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.filesize__hint {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+
+/* ==========================================================================
+   16. TOASTS
+   ========================================================================== */
+
+.toasts {
+  position: fixed;
+  top: calc(var(--header-h) + 14px);
+  right: 18px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 16px 20px;
+  border-radius: var(--radius);
+  background: var(--surface-solid);
+  /* The accent is an inset stripe, so it follows the rounded corner */
+  box-shadow: inset 5px 0 0 var(--toast-accent, var(--muted)), var(--clay);
+  pointer-events: auto;
+  animation: toast-in 0.32s var(--ease) both;
+}
+.toast.is-leaving { overflow: hidden; animation: toast-out 0.26s var(--ease) forwards; }
+.toast--error   { --toast-accent: var(--danger); }
+.toast--success { --toast-accent: var(--success); }
+.toast--info    { --toast-accent: var(--brand-1); }
+
+.toast__icon { flex: 0 0 auto; font-size: 1.05rem; line-height: 1.4; }
+.toast--error   .toast__icon { color: var(--danger); }
+.toast--success .toast__icon { color: var(--success); }
+.toast--info    .toast__icon { color: var(--brand-1); }
+
+.toast__content { flex: 1; min-width: 0; }
+.toast__title { font-size: 0.92rem; font-weight: 700; }
+.toast__msg { margin-top: 2px; color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+
+.toast__close {
+  flex: 0 0 auto;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: background-color var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.toast__close:hover { background: var(--surface-hover); color: var(--text); }
+
+
+/* ==========================================================================
+   17. ANIMATIONS
+   ========================================================================== */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Turns every colour once round the colour wheel; 360° lands back on the
+   start, so it loops with no seam. Run by the GPU as a filter. */
+@keyframes hue-cycle {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+/* Paired with `alternate`. It starts from rest, so a word waiting out
+   its delay is already on its first frame. In ems, so the rise scales with
+   the headline. */
+@keyframes word-float {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-0.14em); }
+}
+/* The glow keeps its centring translate in every frame. */
+@keyframes glow-breathe {
+  from { transform: translateX(-50%) scale(1); }
+  to   { transform: translateX(-47%) scale(1.08); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+/* The shapes' drift: three fixed paths, so the GPU can run them. Each starts
+   at rest; the shape's resting tilt lives in its `transform`, and these
+   `translate` / `rotate` values add to it. */
+@keyframes float-a {
+  from { translate: 0 0;        rotate: 0deg; }
+  to   { translate: 0 -24px;    rotate: 10deg; }
+}
+@keyframes float-b {
+  from { translate: 0 0;        rotate: 0deg; }
+  to   { translate: 8px -16px;  rotate: -12deg; }
+}
+@keyframes float-c {
+  from { translate: 0 0;        rotate: 0deg; }
+  to   { translate: -10px 14px; rotate: 24deg; }
+}
+@keyframes icon-bob {
+  from { translate: 0 0; }
+  to   { translate: 0 -6px; }
+}
+/* Sweeps across in the first 40% of the cycle, then waits off the right
+   edge; the jump back to the left happens where no one can see it. */
+@keyframes shine {
+  0%        { translate: -100% 0; }
+  40%, 100% { translate:  100% 0; }
+}
+@keyframes twinkle {
+  from { scale: 0.45; rotate: 0deg;  opacity: 0.4; }
+  to   { scale: 1;    rotate: 45deg; opacity: 1; }
+}
+/* Still for most of the cycle, then a quick wiggle that settles back to
+   zero, so the start and end frames match. */
+@keyframes mark-wiggle {
+  0%, 84%, 100% { rotate: 0deg; }
+  88%           { rotate: -12deg; }
+  92%           { rotate: 9deg; }
+  96%           { rotate: -4deg; }
+}
+@keyframes icon-pop {
+  40% { transform: translateY(-3px) rotate(-14deg) scale(1.25); }
+}
+@keyframes icon-drop {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(3px); }
+}
+/* One 16px tile of stripes, moved by one tile. */
+@keyframes stripes {
+  from { translate: 0 0; }
+  to   { translate: 16px 0; }
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.14); opacity: 1; }
+}
+/* The bar is 40% of the track, so -100% of its own width starts it just off
+   the left end and 250% ends it just off the right. */
+@keyframes indeterminate {
+  from { translate: -100% 0; }
+  to   { translate:  250% 0; }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(22px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes toast-out {
+  to { opacity: 0; transform: translateX(22px) scale(0.98); }
+}
+
+/* A panel replacing another: the same rise the hero uses, a little shorter. */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+/* Items arriving inside a panel that is already on screen. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+/* A figure being replaced by a new one, rather than blinking. */
+@keyframes value-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Staggered entrances
+
+   Groups arrive in sequence rather than all at once, which reads as one
+   movement instead of a flash.
+
+   The fill mode is deliberately `backwards` and never `both`. Holding the
+   final frame would leave `transform: none` applied at a higher priority than
+   the element's own rules, and quietly kill the hover lift on every card.
+   `backwards` applies the opening frame during the delay and then hands the
+   element back to its own styles.
+   -------------------------------------------------------------------------- */
+
+.scale-grid .scale { animation: rise-in 0.42s var(--ease) backwards; }
+.scale-grid .scale:nth-child(1) { animation-delay: 0.05s; }
+.scale-grid .scale:nth-child(2) { animation-delay: 0.10s; }
+.scale-grid .scale:nth-child(3) { animation-delay: 0.15s; }
+
+.info__cell { animation: rise-in 0.42s var(--ease) backwards; }
+.info__cell:nth-child(1) { animation-delay: 0.06s; }
+.info__cell:nth-child(2) { animation-delay: 0.12s; }
+.info__cell:nth-child(3) { animation-delay: 0.18s; }
+.info__cell:nth-child(4) { animation-delay: 0.24s; }
+
+/* The download block settles in after the figures above it. */
+.filesize { animation: rise-in 0.42s 0.28s var(--ease) backwards; }
+
+/* A newly measured file size replaces the previous one. */
+.filesize__value { animation: value-in 0.26s var(--ease) backwards; }
+
+/* The same for the output resolution when a new scale is picked, and for the
+   zoom level. `display: block` on the first two lets the transform apply. */
+.output-res__value,
+.output-res__estimate,
+.zoom__value { animation: value-in 0.26s var(--ease) backwards; }
+
+
+/* --------------------------------------------------------------------------
+   The comparison divider
+
+   Keyboard steps, Home/End and a click on the frame should glide. A pointer
+   drag must not: easing there would leave the divider trailing behind the
+   cursor, which feels broken rather than smooth. The frame already carries
+   `is-dragging` for exactly this window.
+   -------------------------------------------------------------------------- */
+
+.ba__after,
+.ba__handle {
+  transition: clip-path 0.2s var(--ease), left 0.2s var(--ease);
+}
+.ba.is-dragging .ba__after,
+.ba.is-dragging .ba__handle {
+  transition: none;
+}
+
+
+/* --------------------------------------------------------------------------
+   Holding still while an upscale runs
+
+   The model often runs on the graphics card, and every looping decoration
+   is drawn by that same card each frame. While the tool is busy they pause
+   where they are, so the upscale gets the card to itself and the spinner and
+   progress bar (which keep going) stay smooth. They carry on from the same
+   spot afterwards.
+   -------------------------------------------------------------------------- */
+
+body:has(.tool[data-busy="true"]) :is(.shape, .sparkle, .hero__word, .hero__glow, .brand__mark),
+body:has(.tool[data-busy="true"]) .site-header::after {
+  animation-play-state: paused;
+}
+
+
+/* --------------------------------------------------------------------------
+   Press feedback
+
+   A button that moves under the finger confirms the press before the work
+   it triggers has produced anything visible.
+   -------------------------------------------------------------------------- */
+
+.btn:active:not(:disabled) { transform: translateY(1px) scale(0.995); }
+.scale:active { transform: translateY(0) scale(0.99); }
+
+
+/* ==========================================================================
+   18. RESPONSIVE
+   ========================================================================== */
+
+/* --- Tablet --- */
+@media (max-width: 900px) {
+  .info  { grid-template-columns: repeat(2, 1fr); }
+  .ba    { width: min(100%, calc(52vh * var(--ar))); }
+}
+
+/* --- Mobile --- */
+@media (max-width: 620px) {
+  /* The tool sits in the middle of the screen. The hero fills what the
+     header leaves and centres its content in it; a panel taller than the
+     screen simply grows past it and scrolls as before. The extra bottom
+     padding lifts it a little above true centre, which reads as centred. */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: calc(100vh - var(--header-h));    /* fallback */
+    min-height: calc(100dvh - var(--header-h));
+    padding-block: 16px 64px;
+  }
+
+  /* Fewer, smaller shapes, tucked into the corners away from the text. */
+  .shape { scale: 0.6; }
+  .shape--cube, .shape--bead, .shape--ring, .shape--chip, .shape--seed { display: none; }
+  .shape--sphere  { top: auto; bottom: 4%; left: -44px; }
+  .shape--pill    { top: 2%; left: auto; right: -54px; }
+  .shape--dot     { top: 3%; left: 6%; }
+  .shape--capsule { top: auto; bottom: 8%; left: auto; right: -6px; }
+
+  /* Three sparkles, in the open space above the headline. */
+  .sparkle--4, .sparkle--5, .sparkle--6 { display: none; }
+  .sparkle--1 { top: 12%; left: 24%; }
+  .sparkle--2 { top: 8%;  left: 60%; }
+  .sparkle--3 { top: 16%; left: 82%; }
+
+  .tool { padding: 16px; border-radius: var(--radius-lg); }
+
+  .dropzone { min-height: 250px; padding: 32px 18px; }
+  .dropzone__title { font-size: 1.08rem; }
+
+  /* Stack the preview vertically and let the buttons breathe */
+  .preview { flex-direction: column; align-items: stretch; text-align: center; }
+  .preview__thumb { width: 100%; height: 170px; }
+  .preview__facts { justify-content: center; }
+  .preview__actions { justify-content: center; }
+  .preview__actions .btn { flex: 1; }
+
+  /* Bigger tap targets for the scale picker */
+  .scale-grid { grid-template-columns: 1fr; gap: 10px; }
+  .scale { flex-direction: row; justify-content: space-between; padding: 15px 18px; text-align: left; }
+  .scale__x { font-size: 1.25rem; }
+
+  .output-res { flex-direction: column; align-items: flex-start; gap: 4px; }
+
+  .info { grid-template-columns: repeat(2, 1fr); }
+  .info__cell { padding: 13px 10px; }
+
+  .ba { width: 100%; border-radius: var(--radius-sm); }
+  .ba__grip { width: 46px; height: 46px; }   /* easier to grab with a thumb */
+  .ba__tag { font-size: 0.6rem; padding: 4px 9px; }
+
+  .toasts { top: auto; bottom: 14px; right: 14px; left: 14px; width: auto; }
+  .toast { animation-name: fade-up; }
+
+}
+
+/* --- Motion preferences --- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  /* The loader still needs to read as "busy". Only the indeterminate bar
+     slides; a bar showing real progress stays where its width puts it. */
+  .loader__ring { animation: spin 1.1s linear infinite !important; }
+  .progress.is-indeterminate .progress__bar { animation: indeterminate 1.8s linear infinite !important; }
+}
+
+/* --- Print --- */
+@media print {
+  .site-header, .toasts, .download, .zoom, .hero__shapes { display: none !important; }
+}
