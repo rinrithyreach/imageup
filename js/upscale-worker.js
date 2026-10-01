@@ -13,10 +13,10 @@
    small progress messages.
 
    Protocol
-     page → worker   {type:'init'}                     load runtime + model
+     page → worker   {type:'init', allowGpu}           load runtime + model
      page → worker   {type:'run', rgba, width, height, scale}
      page → worker   {type:'cancel'}
-     worker → page   {type:'load-progress', phase, ratio}
+     worker → page   {type:'load-progress', phase, ratio, download}
      worker → page   {type:'ready', backend, threads}
      worker → page   {type:'progress', tilesDone, tilesTotal, pass, passes, secondsLeft}
      worker → page   {type:'done', rgba, width, height, spentMs, pixelsDone}
@@ -28,17 +28,32 @@
 
 const CONFIG = {
   ortBase: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/',
-  ortScript: 'ort.webgpu.min.js',
 
   /**
-   * The runtime's WebAssembly binary — by far the largest download, and the
-   * one the user waits on. ONNX Runtime fetches it itself during session
-   * creation, which would leave a long silent gap, so it is fetched here
-   * first with progress. That warms the HTTP cache and the runtime's own
-   * request is then served from it.
+   * The two builds of the runtime. The WebGPU one also runs on the CPU, and
+   * is what a CPU fallback mid-job uses; the CPU-only one is loaded when the
+   * graphics card is not going to be used at all — half the download, and
+   * half as much for the browser to compile and hold.
+   *
+   * `wasm` is the runtime's WebAssembly binary — by far the largest download,
+   * and the one the user waits on. ONNX Runtime fetches it itself during
+   * session creation, which would leave a long silent gap, so it is fetched
+   * here first with progress. That warms the HTTP cache and the runtime's
+   * own request is then served from it. `wasmBytes` is its uncompressed size,
+   * for the progress bar; `download` is what actually crosses the network.
    */
-  ortWasm: 'ort-wasm-simd-threaded.jsep.wasm',
-  ortWasmBytes: 28312028,      // uncompressed size, for the progress bar
+  gpuBuild: {
+    script: 'ort.webgpu.min.js',
+    wasm: 'ort-wasm-simd-threaded.asyncify.wasm',   // what ort.webgpu.min.js loads as of 1.30
+    wasmBytes: 26781914,
+    download: '5.5 MB'
+  },
+  cpuBuild: {
+    script: 'ort.wasm.min.js',
+    wasm: 'ort-wasm-simd-threaded.wasm',
+    wasmBytes: 14239897,
+    download: '3.1 MB'
+  },
 
   /**
    * Real-ESRGAN general x4v3. This copy has nine bytes changed against the
@@ -68,6 +83,9 @@ let cancelled = false;
 let modelBytes = null;
 let triedCpuFallback = false;
 
+/** Set by the page: false keeps the graphics card out of it entirely. */
+let gpuAllowed = true;
+
 const post = (message, transfers) => self.postMessage(message, transfers || []);
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -87,8 +105,8 @@ function fail(message, userMessage) {
  * (COEP: require-corp) refuses. Fetching the source with CORS and running it
  * from a same-origin blob URL works in both cases.
  */
-async function loadRuntime() {
-  const url = CONFIG.ortBase + CONFIG.ortScript;
+async function loadRuntime(build) {
+  const url = CONFIG.ortBase + build.script;
 
   try {
     self.importScripts(url);
@@ -126,14 +144,14 @@ async function loadRuntime() {
  * Entirely best-effort: if anything goes wrong the runtime just downloads it
  * the way it always did, and the only loss is the progress bar.
  */
-async function prefetchRuntimeBinary(onProgress) {
+async function prefetchRuntimeBinary(build, onProgress) {
   try {
-    const response = await fetch(CONFIG.ortBase + CONFIG.ortWasm, { mode: 'cors' });
+    const response = await fetch(CONFIG.ortBase + build.wasm, { mode: 'cors' });
     if (!response.ok || !response.body || !response.body.getReader) return;
 
     // Compressed in transit, so Content-Length understates it; the
     // uncompressed size is what the reader will actually hand us.
-    const total = CONFIG.ortWasmBytes;
+    const total = build.wasmBytes;
     const reader = response.body.getReader();
     let received = 0;
 
@@ -205,16 +223,18 @@ function init() {
   if (initPromise) return initPromise;
 
   initPromise = (async function () {
-    post({ type: 'load-progress', phase: 'runtime', ratio: 0 });
-    await loadRuntime();
+    // Decided first, because it picks which build of the runtime to load.
+    const useGpu = gpuAllowed && await detectWebGPU();
+    const build = useGpu ? CONFIG.gpuBuild : CONFIG.cpuBuild;
+    const progress = (ratio) =>
+      post({ type: 'load-progress', phase: 'runtime', ratio: ratio, download: build.download });
+
+    progress(0);
+    await loadRuntime(build);
 
     // The big one. Fetched here rather than silently inside session creation.
-    await prefetchRuntimeBinary((ratio) => {
-      post({ type: 'load-progress', phase: 'runtime', ratio: ratio });
-    });
-    post({ type: 'load-progress', phase: 'runtime', ratio: 1 });
-
-    const useGpu = await detectWebGPU();
+    await prefetchRuntimeBinary(build, progress);
+    progress(1);
 
     ort.env.wasm.wasmPaths = CONFIG.ortBase;
     ort.env.wasm.proxy = false;              // we already are the worker
@@ -620,6 +640,7 @@ self.onmessage = async function (event) {
   }
 
   if (message.type === 'init') {
+    if (message.allowGpu === false) gpuAllowed = false;
     try {
       await init();
     } catch (err) {

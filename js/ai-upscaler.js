@@ -4,8 +4,8 @@
 
    The model is Real-ESRGAN "general x4v3" (SRVGGNetCompact), a trained
    super-resolution network, executed with ONNX Runtime Web — WebGPU where the
-   browser offers it, multi-threaded WebAssembly otherwise. The image never
-   leaves the page.
+   browser offers it (not on iPhone or iPad, see gpuAllowed), multi-threaded
+   WebAssembly otherwise. The image never leaves the page.
 
    All of the heavy work happens in js/upscale-worker.js, on its own thread,
    so the interface never freezes while the network runs. This file is the
@@ -47,7 +47,15 @@ window.ImageUpAI = (function () {
 
     /** Fallback throughput (source pixels per second) before anything is measured. */
     defaultThroughput: 25000,
-    throughputKey: 'imageup-throughput'
+    throughputKey: 'imageup-throughput',
+
+    /**
+     * Set while a job runs on the graphics card and cleared when it ends.
+     * Still set when the page next loads, it means the browser killed the
+     * page mid-job, and gpuOffKey then keeps this device on the CPU.
+     */
+    gpuJobKey: 'imageup-gpu-job',
+    gpuOffKey: 'imageup-gpu-off'
   };
 
 
@@ -62,6 +70,7 @@ window.ImageUpAI = (function () {
     backend: null,
     threads: 1,
     throughput: null,      // measured source px/s, remembered between visits
+    gpuCrashNotice: false, // the last page died mid-GPU-job; told to the user once
 
     // Callbacks for whatever the worker is doing right now.
     onLoadProgress: null,
@@ -114,6 +123,51 @@ window.ImageUpAI = (function () {
     const error = new Error(message);
     error.userMessage = userMessage;
     return error;
+  }
+
+  /** localStorage, doing nothing where it is unavailable (private mode). */
+  function storageGet(key) {
+    try { return window.localStorage.getItem(key); } catch (err) { return null; }
+  }
+  function storageSet(key, value) {
+    try { window.localStorage.setItem(key, value); } catch (err) { /* private mode */ }
+  }
+  function storageRemove(key) {
+    try { window.localStorage.removeItem(key); } catch (err) { /* private mode */ }
+  }
+
+  /**
+   * iPhone, iPod or iPad, in any browser — all of them are Safari underneath.
+   * An iPad asks for desktop sites and calls itself a Mac, but a Mac has no
+   * touch screen.
+   */
+  function isAppleMobile() {
+    const agent = navigator.userAgent;
+    return /iPhone|iPad|iPod/.test(agent) ||
+      (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1);
+  }
+
+  /**
+   * Whether the graphics card may be used.
+   *
+   * Not on iPhone or iPad. Safari there offers WebGPU and builds the session
+   * on it, but running the model gets the page closed by iOS partway through
+   * the tiles ("This webpage was reloaded because a problem occurred") — a
+   * crash, not an error, so the worker's own CPU fallback never gets the
+   * chance to step in.
+   *
+   * Nor anywhere that has happened before: a GPU job still marked as running
+   * when the page loads never finished, whatever the browser.
+   */
+  function gpuAllowed() {
+    return !isAppleMobile() && storageGet(CONFIG.gpuOffKey) !== '1';
+  }
+
+  function checkForGpuCrash() {
+    if (storageGet(CONFIG.gpuJobKey) === null) return;
+    storageRemove(CONFIG.gpuJobKey);
+    storageSet(CONFIG.gpuOffKey, '1');
+    state.gpuCrashNotice = true;
   }
 
   /** Pulls raw RGBA out of any drawable source. */
@@ -200,7 +254,7 @@ window.ImageUpAI = (function () {
     switch (message.type) {
       case 'load-progress':
         if (state.onLoadProgress) {
-          state.onLoadProgress({ phase: message.phase, ratio: message.ratio });
+          state.onLoadProgress({ phase: message.phase, ratio: message.ratio, download: message.download });
         }
         break;
 
@@ -260,7 +314,7 @@ window.ImageUpAI = (function () {
       state.resolveLoad = resolve;
       state.rejectLoad = reject;
       try {
-        createWorker().postMessage({ type: 'init' });
+        createWorker().postMessage({ type: 'init', allowGpu: gpuAllowed() });
       } catch (err) {
         state.resolveLoad = null;
         state.rejectLoad = null;
@@ -345,6 +399,11 @@ window.ImageUpAI = (function () {
       }, 120);
     }
 
+    // Marked for as long as the graphics card has the job, so a page the
+    // browser kills partway through is recognised when it comes back.
+    const onGpu = state.backend === 'webgpu';
+    if (onGpu) storageSet(CONFIG.gpuJobKey, '1');
+
     let result;
     try {
       result = await new Promise((resolve, reject) => {
@@ -363,6 +422,7 @@ window.ImageUpAI = (function () {
       });
     } finally {
       if (cancelPoll) clearInterval(cancelPoll);
+      if (onGpu) storageRemove(CONFIG.gpuJobKey);
     }
 
     if (result.spentMs > 0) {
@@ -415,6 +475,18 @@ window.ImageUpAI = (function () {
     return Promise.resolve();
   }
 
+  /** True once, on the first call after a page that died mid-GPU-job. */
+  function takeCrashNotice() {
+    const notice = state.gpuCrashNotice;
+    state.gpuCrashNotice = false;
+    return notice;
+  }
+
+  checkForGpuCrash();
+
+  // Closing or leaving the page mid-job is not a crash.
+  window.addEventListener('pagehide', () => storageRemove(CONFIG.gpuJobKey));
+
   return {
     CONFIG: CONFIG,
     load: load,
@@ -424,6 +496,8 @@ window.ImageUpAI = (function () {
     estimateSeconds: estimateSeconds,
     estimatePeakBytes: estimatePeakBytes,
     passesFor: passesFor,
+    isAppleMobile: isAppleMobile,
+    takeCrashNotice: takeCrashNotice,
     dispose: dispose
   };
 })();

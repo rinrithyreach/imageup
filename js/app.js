@@ -861,19 +861,10 @@
    */
   function peakMemoryLimit() {
     const gigabytes = navigator.deviceMemory;
-    if (!(gigabytes > 0)) return isAppleMobile() ? CONFIG.iosMaxPeakBytes : CONFIG.maxPeakBytes;
+    if (!(gigabytes > 0)) {
+      return ImageUpAI.isAppleMobile() ? CONFIG.iosMaxPeakBytes : CONFIG.maxPeakBytes;
+    }
     return Math.min(CONFIG.maxPeakBytes, gigabytes * 1024 * 1024 * 1024 * 0.5);
-  }
-
-  /**
-   * iPhone, iPod or iPad, in any browser — all of them are Safari underneath.
-   * An iPad asks for desktop sites and calls itself a Mac, but a Mac has no
-   * touch screen.
-   */
-  function isAppleMobile() {
-    const agent = navigator.userAgent;
-    return /iPhone|iPad|iPod/.test(agent) ||
-      (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1);
   }
 
   /**
@@ -1129,7 +1120,7 @@
             setProgress(info.ratio);
             setProcessingMessage(
               'Downloading the AI engine…',
-              Math.round(info.ratio * 100) + '% of 5.5 MB · one-time download, then cached'
+              Math.round(info.ratio * 100) + '% of ' + (info.download || '5.5 MB') + ' · one-time download, then cached'
             );
           } else if (info.phase === 'model') {
             setProgress(info.ratio);
@@ -2542,6 +2533,16 @@
     setScale(CONFIG.defaultScale, { silent: true });
     setZoomIndex(0);
     showPanel('upload');
+
+    // The browser closed the page during the last job on the graphics card,
+    // so this device now runs on the CPU (see gpuAllowed in ai-upscaler.js).
+    if (ImageUpAI.takeCrashNotice()) {
+      showToast('Switched to CPU Mode',
+        'The browser stopped the last upscale while it ran on the graphics chip. ' +
+        'This device will use the processor from now on: slower, but it finishes.',
+        'info', 12000);
+    }
+
     preloadEngineWhenIdle();
   }
 

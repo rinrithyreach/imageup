@@ -250,6 +250,20 @@ and starts the job again. It takes several times longer, and the result card cha
 
 Genuine out-of-memory errors are *not* retried — the CPU would fail the same way, slower.
 
+Both fallbacks need the page to survive the failure, and there is a third way it can go:
+**the browser closes the page outright.** On iPhone, Safari offers WebGPU and builds the session
+on it, but running this model gets the page closed by iOS partway through the tiles (*"This
+webpage was reloaded because a problem occurred"*). No error reaches the worker, so nothing
+can step in. Two guards cover it, in `gpuAllowed()` in `js/ai-upscaler.js`:
+
+- **iPhone and iPad never use the GPU.** They load ONNX Runtime's CPU-only build
+  (`ort.wasm.min.js`, 3.1 MB instead of 5.5 MB) and run on WebAssembly.
+- **Any other browser where it happens gets the same treatment from then on.** While a job
+  runs on the GPU, `localStorage` holds a marker (`imageup-gpu-job`) that is cleared when the
+  job ends, fails or is cancelled, and when the page is closed normally. A marker still there
+  on the next load means the page died mid-job: the device is switched to the CPU
+  (`imageup-gpu-off`) and a notice says so, once. Clearing site data undoes it.
+
 ---
 
 ## Performance
@@ -440,8 +454,10 @@ Two things to check on your host:
 2. **`assets/models/` is actually uploaded.** Some deploy pipelines skip large binaries.
 
 If you would rather not depend on a CDN at all, download the ONNX Runtime `dist` files and
-point `CONFIG.ortBase` in `js/ai-upscaler.js` at your own copy. You need `ort.webgpu.min.js`
-plus the `ort-wasm-simd-threaded.jsep.*` files from the same version.
+point `CONFIG.ortBase` in `js/upscale-worker.js` at your own copy. You need `ort.webgpu.min.js`
+and the `ort-wasm-simd-threaded.asyncify.*` files for the GPU build, plus `ort.wasm.min.js` and
+`ort-wasm-simd-threaded.{mjs,wasm}` for the CPU-only build iPhones use, all from the same
+version.
 
 ---
 
@@ -617,6 +633,10 @@ released (`canvas.width = 0`) so large images do not pile up in memory.
   saving an empty file.
 - **A GPU that fails mid-run is recovered from, not reported.** The job restarts on the CPU and
   the result card shows `WASM` instead of `WebGPU`. The only sign is that it took longer.
+- **iPhone and iPad are CPU-only, and slow on big photos.** One WebAssembly thread on GitHub
+  Pages and similar hosts (see cross-origin isolation above). A small image takes seconds; a
+  full camera photo can take many minutes, and iOS pauses the page if the screen locks or
+  another app opens.
 
 ---
 
@@ -682,8 +702,9 @@ therefore invisible.
 ## Browser support
 
 Chrome, Edge, Firefox and Safari — current versions and one back. WebGPU is used where
-available (Chrome/Edge 113+, Safari 18+); everything else falls back to WebAssembly, which is
-supported everywhere the rest of the app runs.
+available (Chrome/Edge 113+, Safari 18+ on the Mac); everything else falls back to
+WebAssembly, which is supported everywhere the rest of the app runs. iPhone and iPad always use
+WebAssembly, whatever the browser — see [Backends](#backends).
 
 Internet Explorer is not supported.
 
