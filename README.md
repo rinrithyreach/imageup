@@ -467,6 +467,7 @@ plus the `ort-wasm-simd-threaded.jsep.*` files from the same version.
 | `apiEndpoint` | `'/api/upscale'` | Only used when `engine` is `'api'` |
 | `maxFileSize` | `30 * 1024 * 1024` | Upload limit in bytes |
 | `maxPeakBytes` | `2048 * 1024 * 1024` | Ceiling on the memory one job may hold, checked before starting. Halved on devices that report less through `navigator.deviceMemory` |
+| `iosMaxPeakBytes` | `1024 * 1024 * 1024` | The same ceiling on iPhone and iPad, which report no memory and close the tab instead of failing |
 | `targetOutputBytes` | `{ 2: 17 MB, 4: 51 MB, 8: 100 MB }` | The size a large download is brought to at each upscale level; files no bigger than the band's top are left as they are |
 | `outputBandFraction` | `0.1` | How far from the target, as a share of it, still counts as there (± 10 %: 15–19, 46–56, 90–110 MB) |
 | `maxStoredBytes` | `512 * 1024 * 1024` | Memory set aside for the file while it is built; the JPEG fallback is not attempted past it |
@@ -589,7 +590,7 @@ released (`canvas.width = 0`) so large images do not pile up in memory.
 - **What is left is memory**, which is the honest limit: an 8× job holds its 4× intermediate
   and its final result at once, plus the file it writes. That total is estimated before
   starting and checked against `maxPeakBytes`, trimmed to the device where
-  `navigator.deviceMemory` reports one.
+  `navigator.deviceMemory` reports one, and lowered to `iosMaxPeakBytes` on iPhone and iPad.
 - **A refusal names the level that fits.** "Try a lower upscale level" left people guessing
   which one, and on a large photo two of the three can be out of reach. The message reads
   *"… would need about 1.87 GB of memory to build, more than this device can be relied on for.
@@ -600,8 +601,11 @@ released (`canvas.width = 0`) so large images do not pile up in memory.
 - **Memory is checked up front.** A job that would need more pixel memory than a browser tab can
   be relied on for is refused with the figure, rather than failing partway through and wasting
   the time already spent.
-- **Mobile Safari** has far less memory. Large jobs may fail there even under the configured
-  limits; the error toast covers this case.
+- **iPhone and iPad** give a tab far less memory, and past it iOS does not raise an error the
+  app could catch: it reloads the page (*"This webpage was reloaded because a problem
+  occurred"*). No browser there reports `navigator.deviceMemory`, so the ceiling is
+  `iosMaxPeakBytes` (1 GB) instead of 2 GB. A 12 MP or 24 MP iPhone photo is allowed at 2×
+  and refused at 4× and 8×; a 48 MP one is refused at every level.
 - **The comparison view shows a reduced copy** of anything past 4096 pixels a side, because
   nothing bigger can be seen in a frame that size even zoomed in. It says so on the AFTER tag —
   *"preview at 1/5 size"* — rather than passing itself off as the full result. The download is

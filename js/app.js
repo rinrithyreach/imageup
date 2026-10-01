@@ -66,6 +66,16 @@
     maxPeakBytes: 2048 * 1024 * 1024,        // 2GB, trimmed on smaller devices
 
     /**
+     * The same ceiling on iPhone and iPad, where it has to be far lower.
+     *
+     * iOS gives a Safari tab much less than 2GB, and past its limit it does
+     * not fail an allocation the app could catch — it closes the page
+     * ("This webpage was reloaded because a problem occurred"). No browser
+     * on iOS reports the device's memory, so this one figure covers them all.
+     */
+    iosMaxPeakBytes: 1024 * 1024 * 1024,     // 1GB
+
+    /**
      * Above this, the file is written with real compression instead of being
      * stored whole.
      *
@@ -846,12 +856,24 @@
    * navigator.deviceMemory is Chrome-only and rounded to a power of two, but
    * that is enough to tell a 4GB laptop from a 16GB desktop, and promising a
    * small machine something it cannot deliver is worse than refusing. Where
-   * the browser does not say, the fixed ceiling stands.
+   * the browser does not say, the fixed ceiling stands — the lower iOS one
+   * on an iPhone or iPad.
    */
   function peakMemoryLimit() {
     const gigabytes = navigator.deviceMemory;
-    if (!(gigabytes > 0)) return CONFIG.maxPeakBytes;
+    if (!(gigabytes > 0)) return isAppleMobile() ? CONFIG.iosMaxPeakBytes : CONFIG.maxPeakBytes;
     return Math.min(CONFIG.maxPeakBytes, gigabytes * 1024 * 1024 * 1024 * 0.5);
+  }
+
+  /**
+   * iPhone, iPod or iPad, in any browser — all of them are Safari underneath.
+   * An iPad asks for desktop sites and calls itself a Mac, but a Mac has no
+   * touch screen.
+   */
+  function isAppleMobile() {
+    const agent = navigator.userAgent;
+    return /iPhone|iPad|iPod/.test(agent) ||
+      (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1);
   }
 
   /**
