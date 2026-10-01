@@ -78,8 +78,9 @@
     maxStoredBytes: 512 * 1024 * 1024,       // 512MB
 
     /**
-     * The size a large download is brought to: about targetOutputBytes, give
-     * or take outputBandBytes (45–55 MB).
+     * The size a large download is brought to, per upscale level: about its
+     * targetOutputBytes, give or take outputBandFraction of it (2× 15–19 MB,
+     * 4× 46–56 MB, 8× 90–110 MB).
      *
      * A file that is already no bigger than the top of the band is left
      * exactly as it was — stored uncompressed. A bigger one is reduced only
@@ -87,8 +88,12 @@
      * can be done (see encodeOutput). A file smaller than the band stays its
      * real size: nothing is ever padded to look bigger.
      */
-    targetOutputBytes: 50 * 1024 * 1024,     // 50MB
-    outputBandBytes: 5 * 1024 * 1024,        // ± 5MB
+    targetOutputBytes: {
+      2: 17 * 1024 * 1024,                   // 17MB
+      4: 51 * 1024 * 1024,                   // 51MB
+      8: 100 * 1024 * 1024                   // 100MB
+    },
+    outputBandFraction: 0.1,                 // ± 10%
 
     /** Above this estimate the button warns before starting a long job. */
     slowJobSeconds: 45,
@@ -116,15 +121,15 @@
   /** Framing every PNG here carries: signature, IHDR, IDAT header and CRC, zlib header, Adler-32, IEND. */
   const PNG_FRAMING_BYTES = 63;
 
-  /** The size band, in bytes and as people read it ("about 50 MB", "45–55 MB"). */
-  const outputBand = () => ({
-    target: CONFIG.targetOutputBytes,
-    low: CONFIG.targetOutputBytes - CONFIG.outputBandBytes,
-    high: CONFIG.targetOutputBytes + CONFIG.outputBandBytes
-  });
+  /** An upscale level's size band, in bytes and as people read it ("about 51 MB", "46–56 MB"). */
+  const outputBand = (scale) => {
+    const target = CONFIG.targetOutputBytes[scale];
+    const spread = Math.round(target * CONFIG.outputBandFraction);
+    return { target: target, low: target - spread, high: target + spread };
+  };
   const megabytes = (bytes) => Math.round(bytes / (1024 * 1024));
-  const targetLabel = () => megabytes(CONFIG.targetOutputBytes) + ' MB';
-  const bandLabel = () => megabytes(outputBand().low) + '–' + megabytes(outputBand().high) + ' MB';
+  const targetLabel = (scale) => megabytes(outputBand(scale).target) + ' MB';
+  const bandLabel = (scale) => megabytes(outputBand(scale).low) + '–' + megabytes(outputBand(scale).high) + ' MB';
 
   const ZOOM_STEPS = [1, 1.25, 1.5, 2, 3, 4];
 
@@ -946,9 +951,9 @@
       // runs at all. Past the top of the size band the file is brought down
       // to about the target instead, so the target is what is shown.
       const bytes = pngByteLength(size.width, size.height);
-      const fileNote = bytes <= outputBand().high
+      const fileNote = bytes <= outputBand(state.scale).high
         ? formatBytes(bytes) + ' PNG'
-        : 'file about ' + targetLabel();
+        : 'file about ' + targetLabel(state.scale);
       el.outputEstimate.textContent = [describeJob(), fileNote].filter(Boolean).join(' · ');
       el.outputEstimate.classList.toggle('is-slow', isSlowJob());
     } else {
@@ -1153,7 +1158,7 @@
 
       // Encode once up-front so the result card can show a real file size.
       setProcessingMessage('Writing the file…', '');
-      keepOutput(await encodeOutput(result.rgba, result.width, result.height));
+      keepOutput(await encodeOutput(result.rgba, result.width, result.height, state.scale));
 
       renderResult(result.engine);
       showPanel('result');
@@ -1959,9 +1964,9 @@
   }
 
   /**
-   * Turns the result into the file to download, brought to about
-   * CONFIG.targetOutputBytes (within the 45–55 MB band) when it would
-   * otherwise be bigger — and never reduced further than that takes:
+   * Turns the result into the file to download, brought to about the
+   * upscale level's CONFIG.targetOutputBytes (within its ± 10% band) when
+   * it would otherwise be bigger — and never reduced further than that takes:
    *
    *   1. No bigger than the band's top as it is: PNG stored whole, exactly
    *      as before. Its size was shown before the job ran.
@@ -1983,8 +1988,8 @@
    *
    * @returns {Promise<{blob: Blob, kind: string, channels: number, quality: number, overCap: boolean}>}
    */
-  async function encodeOutput(pixels, width, height) {
-    const band = outputBand();
+  async function encodeOutput(pixels, width, height, scale) {
+    const band = outputBand(scale);
     const whole = pngByteLength(width, height, 4);
     const file = (blob, kind, channels, quality, overCap) =>
       ({ blob: blob, kind: kind, channels: channels, quality: quality, overCap: overCap });
@@ -2174,8 +2179,8 @@
     el.infoEngine.textContent = describeEngine(engine);
 
     // Download options start from a clean slate every run.
-    const target = targetLabel();
-    const band = bandLabel();
+    const target = targetLabel(state.scale);
+    const band = bandLabel(state.scale);
     const quality = Math.round(runtime.outputQuality * 100);
     const noAlpha = runtime.outputChannels === 3
       ? ', with the unused transparency channel left out'
@@ -2326,7 +2331,7 @@
   /** Encodes once and keeps it, so downloading costs nothing extra. */
   async function getOutputBlob() {
     if (runtime.outputBlob) return runtime.outputBlob;
-    keepOutput(await encodeOutput(state.resultPixels, state.resultWidth, state.resultHeight));
+    keepOutput(await encodeOutput(state.resultPixels, state.resultWidth, state.resultHeight, state.scale));
     return runtime.outputBlob;
   }
 

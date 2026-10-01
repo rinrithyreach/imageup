@@ -113,10 +113,11 @@ the interface beyond canvases. `app.js` never talks to the model directly.
 - Zoom controls (100 % → 400 %), with the divider staying aligned while zoomed
 - Result card: original size, upscaled size, scale factor, format, file sizes, and which
   backend actually ran (`Real-ESRGAN ×4 · WebGPU` or `· WASM ×4`)
-- **Large downloads land at about 50 MB (45–55 MB).** A PNG written by the app itself: stored
-  uncompressed when it is no bigger than that (its size is then known before the job runs), and
-  otherwise reduced only as far as it takes to land near 50 MB — losslessly, unless no PNG of the
-  image can get that small, when it is a full-resolution JPEG at the highest quality that does
+- **Large downloads land at a size set per level: about 17 MB at 2×, 51 MB at 4×, 100 MB at
+  8× (± 10%).** A PNG written by the app itself: stored uncompressed when it is no bigger than
+  that (its size is then known before the job runs), and otherwise reduced only as far as it
+  takes to land near the target — losslessly, unless no PNG of the image can get that small,
+  when it is a full-resolution JPEG at the highest quality that does
 - **The file size is measured and shown before you download**, not after
 - Filenames like `photo-4x-upscaled.png` (`.jpg` in the JPEG case)
 - `Upscale Another Image` resets everything back to the empty upload state
@@ -282,8 +283,15 @@ The interface shows the estimate above the Upscale button, and Cancel is always 
 ## File size
 
 The app saves **PNG**, written by the app itself rather than through `canvas.toBlob`, and
-brings large files to **about 50 MB** (`targetOutputBytes`, ± `outputBandBytes`: 45–55 MB).
-There is no format menu and no quality slider (see [The 50 MB target](#the-50-mb-target)).
+brings large files to a size set per upscale level (`targetOutputBytes`, ± `outputBandFraction`):
+
+| Level | Target | Band |
+| --- | --- | --- |
+| 2× | **17 MB** | 15–19 MB |
+| 4× | **51 MB** | 46–56 MB |
+| 8× | **100 MB** | 90–110 MB |
+
+There is no format menu and no quality slider (see [The size targets](#the-size-targets)).
 
 ### Why the PNG is written by hand
 
@@ -321,9 +329,10 @@ scanlines byte for byte.
 ### Reaching a target size
 
 Since an uncompressed pixel costs four bytes, a target maps straight onto a pixel count —
-**40 MB is 10.5 MP, 50 MB is 13.1 MP**. These are the uncompressed sizes. Anything past 55 MB
-is brought to about 50 MB instead (see below), so for the larger entries the file you get is
-about 50 MB rather than what the table says:
+**40 MB is 10.5 MP, 50 MB is 13.1 MP**. These are the uncompressed sizes. Anything past the
+top of its level's band (19 MB at 2×, 56 MB at 4×, 110 MB at 8×) is brought to about that
+level's target instead (see below), so for the larger entries the file you get is about
+17, 51 or 100 MB rather than what the table says:
 
 | Source | 2× | 4× | 8× |
 | --- | --- | --- | --- |
@@ -344,16 +353,17 @@ asserted too.
 Encoding runs at roughly 52 MB/s, so a 45.8 MB file takes under a second. It reads the result's
 bytes directly rather than pulling them back out of a canvas.
 
-### The 50 MB target
+### The size targets
 
-Large results are brought to about `targetOutputBytes` (50 MB), give or take
-`outputBandBytes` (5 MB) — reduced only as far as that takes. `encodeOutput()` tries, in order:
+Large results are brought to about the level's `targetOutputBytes` — 17 MB at 2×, 51 MB at 4×,
+100 MB at 8× — give or take `outputBandFraction` (10 %) of it, and reduced only as far as that
+takes. `encodeOutput()` tries, in order (figures below are for 4×, band 46–56 MB):
 
-1. **PNG, stored whole** — when it is no bigger than 55 MB as it is. Exactly as before, and the
-   size is shown before the job runs. A result smaller than 45 MB also stays its real size:
+1. **PNG, stored whole** — when it is no bigger than 56 MB as it is. Exactly as before, and the
+   size is shown before the job runs. A result smaller than 46 MB also stays its real size:
    nothing is padded to look bigger.
 2. **PNG, stored whole without the alpha channel** — when the image has no transparency and
-   leaving that channel out (a quarter of the bytes) lands it in 45–55 MB. Still uncompressed.
+   leaving that channel out (a quarter of the bytes) lands it in 46–56 MB. Still uncompressed.
 3. **PNG, partly compressed** — `encodePngHybrid()` stores the top rows as they are and
    compresses the rest (Paeth filter, then the browser's own raw deflate). Deflate allows stored
    and compressed blocks in one stream, so moving that one boundary sets the size anywhere
@@ -361,11 +371,12 @@ Large results are brought to about `targetOutputBytes` (50 MB), give or take
    out from a sample of about 4 % of the rows (`sampleCompressionRatio()`,
    `storedRowsFor()`); if the file misses the band, the real ratio of the rows actually
    compressed sets a second, closer split.
-4. **JPEG, full resolution, at the highest quality under 55 MB** — only when no PNG of the image
+4. **JPEG, full resolution, at the highest quality under 56 MB** — only when no PNG of the image
    can get that small. Whole percentages are searched, so it lands as close under the top as the
    format allows.
 
-Measured end to end in the browser, downloading the real file:
+Measured end to end in the browser, downloading the real file. These were taken when every
+level shared one 50 MB target (45–55 MB), before the per-level targets:
 
 | 4× result | Uncompressed | Download |
 | --- | --- | --- |
@@ -382,7 +393,7 @@ cannot reach the band: no PNG of it gets under 55 MB, and JPEG jumps from 30 MB 
 The interface says which one you got: the result card shows the format and *Lossless ·
 uncompressed*, *Lossless · partly compressed* or *JPEG · 99 % quality*, and the file-size hint
 explains why. When the file will be brought to the target, the line above the Upscale button
-reads *file about 50 MB* instead of an exact figure.
+reads *file about 51 MB* (or 17 / 100 MB, by level) instead of an exact figure.
 
 The JPEG needs a canvas as large as the image, so it is only attempted up to
 `maxStoredBytes` (512 MB of pixels) — the memory the job is already planned with. Past that,
@@ -456,8 +467,8 @@ plus the `ort-wasm-simd-threaded.jsep.*` files from the same version.
 | `apiEndpoint` | `'/api/upscale'` | Only used when `engine` is `'api'` |
 | `maxFileSize` | `30 * 1024 * 1024` | Upload limit in bytes |
 | `maxPeakBytes` | `2048 * 1024 * 1024` | Ceiling on the memory one job may hold, checked before starting. Halved on devices that report less through `navigator.deviceMemory` |
-| `targetOutputBytes` | `50 * 1024 * 1024` | The size a large download is brought to; files no bigger than the band's top are left as they are |
-| `outputBandBytes` | `5 * 1024 * 1024` | How far from the target still counts as there (45–55 MB) |
+| `targetOutputBytes` | `{ 2: 17 MB, 4: 51 MB, 8: 100 MB }` | The size a large download is brought to at each upscale level; files no bigger than the band's top are left as they are |
+| `outputBandFraction` | `0.1` | How far from the target, as a share of it, still counts as there (± 10 %: 15–19, 46–56, 90–110 MB) |
 | `maxStoredBytes` | `512 * 1024 * 1024` | Memory set aside for the file while it is built; the JPEG fallback is not attempted past it |
 | `slowJobSeconds` | `45` | Above this estimate, the time hint turns amber |
 | `defaultScale` | `2` | Scale selected on load and after a reset |
